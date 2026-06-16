@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>分會點名站</title>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root{
+    --ink:#1a1f2b;--paper:#f6f4ee;--card:#ffffff;--line:#dcd7ca;
+    --gold:#b8893a;--gold-deep:#8a6320;--green:#2f7d57;--green-soft:#e6f1ea;
+    --red:#a4452f;--red-soft:#f5e7e2;--muted:#6b6557;
+    --shadow:0 1px 2px rgba(26,31,43,.06),0 8px 24px rgba(26,31,43,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{font-family:"PingFang HK","PingFang TC","Microsoft JhengHei",-apple-system,system-ui,sans-serif;
+    background:var(--paper);color:var(--ink);line-height:1.5;padding-bottom:env(safe-area-inset-bottom);}
+  .wrap{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+  header{padding:22px 20px 16px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;justify-content:space-between;gap:12px;}
+  header .mark{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--gold-deep);font-weight:700;}
+  header h1{font-size:21px;font-weight:800;letter-spacing:-.01em;margin-top:3px;}
+  header .date{font-size:12.5px;color:var(--muted);text-align:right;white-space:nowrap;}
+  nav{display:flex;border-bottom:1px solid var(--line);background:var(--card);}
+  nav button{flex:1;border:0;background:none;padding:13px 4px;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2.5px solid transparent;font-family:inherit;}
+  nav button.on{color:var(--ink);border-bottom-color:var(--gold);}
+  main{flex:1;padding:18px 20px 32px;}
+  .panel{display:none;}.panel.on{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+  #reader{width:100%;border-radius:14px;overflow:hidden;background:#000;min-height:240px;}
+  #reader video{border-radius:14px;}
+  .scanmsg{margin-top:14px;padding:16px;border-radius:12px;text-align:center;font-size:16px;font-weight:700;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);min-height:58px;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .scanmsg.ok{background:var(--green-soft);border-color:#bfe0cd;color:var(--green);}
+  .scanmsg.dup{background:#fbf3e2;border-color:#ecd9ad;color:var(--gold-deep);}
+  .scanmsg.err{background:var(--red-soft);border-color:#e6c3b7;color:var(--red);}
+  .startbtn{width:100%;padding:15px;border:0;border-radius:12px;background:var(--ink);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:14px;}
+  .startbtn.stop{background:var(--red);}
+  .stats{display:flex;gap:10px;margin-top:16px;}
+  .stat{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center;box-shadow:var(--shadow);}
+  .stat .n{font-size:26px;font-weight:800;line-height:1.1;}.stat .l{font-size:11px;color:var(--muted);margin-top:2px;letter-spacing:.04em;}
+  .stat.present .n{color:var(--green);}.stat.absent .n{color:var(--red);}
+  .sectit{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:22px 0 10px;}
+  .row{display:flex;align-items:center;gap:12px;padding:11px 13px;background:var(--card);border:1px solid var(--line);border-radius:11px;margin-bottom:8px;box-shadow:var(--shadow);}
+  .row .nm{flex:1;font-weight:600;font-size:14.5px;}.row .meta{font-size:12px;color:var(--muted);}
+  .pill{font-size:11px;font-weight:700;padding:4px 9px;border-radius:20px;}
+  .pill.in{background:var(--green-soft);color:var(--green);}.pill.out{background:var(--red-soft);color:var(--red);}
+  .del{border:0;background:none;color:var(--muted);cursor:pointer;font-size:18px;padding:0 4px;}
+  input{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:10px;font-size:15px;font-family:inherit;background:var(--card);color:var(--ink);}
+  input:focus{outline:2px solid var(--gold);outline-offset:-1px;}
+  label{font-size:12.5px;font-weight:600;color:var(--muted);display:block;margin:14px 0 6px;}
+  .btn{width:100%;padding:13px;border:0;border-radius:11px;background:var(--gold);color:#fff;font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:16px;}
+  .btn.ghost{background:none;color:var(--gold-deep);border:1px solid var(--line);}
+  .btnrow{display:flex;gap:10px;}.btnrow .btn{margin-top:0;}
+  .empty{text-align:center;color:var(--muted);font-size:13.5px;padding:30px 10px;}
+  .qgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}
+  .qcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 10px;text-align:center;page-break-inside:avoid;}
+  .qcard img{width:100%!important;height:auto!important;max-width:150px;display:block;margin:0 auto;}
+  .qcard .qn{font-weight:700;font-size:14px;margin-top:6px;}
+  .qcard .qb{font-size:10px;letter-spacing:.2em;color:var(--gold-deep);text-transform:uppercase;font-weight:700;}
+  .qcard .qi{font-size:10px;color:var(--muted);margin-top:2px;}
+  .note{font-size:12px;color:var(--muted);background:var(--card);border:1px dashed var(--line);border-radius:10px;padding:11px 13px;margin-top:14px;}
+  .banner{padding:10px 14px;font-size:12.5px;text-align:center;font-weight:600;}
+  .banner.sync{background:#fbf3e2;color:var(--gold-deep);}
+  .banner.err{background:var(--red-soft);color:var(--red);}
+  .banner.ok{background:var(--green-soft);color:var(--green);}
+  @media print{nav,header .date,.startbtn,.btn,.note,.banner,#tab-scan,#tab-members,#tab-records{display:none!important;}body{background:#fff;}.qgrid{grid-template-columns:1fr 1fr 1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><div class="mark">BNI · Attendance</div><h1>分會點名站</h1></div>
+    <div class="date" id="todayLabel"></div>
+  </header>
+  <div id="banner" class="banner" style="display:none"></div>
+  <nav>
+    <button id="tab-scan" class="on" onclick="showTab('scan')">掃碼點名</button>
+    <button id="tab-records" onclick="showTab('records')">今日出席</button>
+    <button id="tab-members" onclick="showTab('members')">會員 / QR</button>
+  </nav>
+  <main>
+    <section id="scan" class="panel on">
+      <button id="scanToggle" class="startbtn" onclick="toggleScan()">開始掃碼</button>
+      <div id="reader"></div>
+      <div id="scanMsg" class="scanmsg">按上方按鈕,對準會員的個人 QR Code</div>
+      <div class="stats">
+        <div class="stat present"><div class="n" id="sPresent">0</div><div class="l">已到</div></div>
+        <div class="stat absent"><div class="n" id="sAbsent">0</div><div class="l">未到</div></div>
+        <div class="stat"><div class="n" id="sTotal">0</div><div class="l">會員</div></div>
+      </div>
+    </section>
+    <section id="records" class="panel">
+      <div class="stats">
+        <div class="stat present"><div class="n" id="rPresent">0</div><div class="l">已到</div></div>
+        <div class="stat absent"><div class="n" id="rAbsent">0</div><div class="l">未到</div></div>
+      </div>
+      <div class="sectit">已到</div><div id="presentList"></div>
+      <div class="sectit">未到</div><div id="absentList"></div>
+      <div class="btnrow" style="margin-top:18px;">
+        <button class="btn ghost" onclick="loadData()">重新整理</button>
+        <button class="btn ghost" onclick="exportCSV()">匯出 CSV</button>
+      </div>
+    </section>
+    <section id="members" class="panel">
+      <label>新增會員姓名</label>
+      <input id="newName" placeholder="例如:陳大文" onkeydown="if(event.key==='Enter')addMember()">
+      <button class="btn" id="addBtn" onclick="addMember()">新增會員</button>
+      <div class="sectit">會員名單 <span id="memCount"></span></div>
+      <div id="memberList"></div>
+      <div class="note" id="qrNote" style="display:none">下方是每位會員的專屬 QR Code,資料存在雲端,任何裝置打開都一致,QR 卡永久有效。按「列印 / 儲存 QR 卡」可印出後裁開,或截圖傳給會員。</div>
+      <div id="qrGrid" class="qgrid"></div>
+      <button class="btn ghost" id="printBtn" style="display:none" onclick="window.print()">列印 / 儲存 QR 卡</button>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ===== 設定:填入你發佈 Apps Script 後拿到的 Web App 網址,以及密鑰 ===== */
+const API = 'https://script.google.com/macros/s/AKfycbxRMciE4ermHN4cpVIpztyhYfAo5QC5c_yG2clzp7WRAF9z8MsjS0chgsaO-j_Pkq3b/exec';   // 例如 https://script.google.com/macros/s/AKfy.../exec
+const SECRET = 'bni_talent_att_2026';              // 要跟 Apps Script 裡的 SECRET 一模一樣
+/* ================================================================= */
+
+let state = {members:[], present:[], today:''};
+let scanner=null, scanning=false, lastScan={id:null,t:0};
+
+document.getElementById('todayLabel').textContent = new Date().toISOString().slice(0,10);
+
+function banner(msg, cls){
+  const b=document.getElementById('banner');
+  if(!msg){b.style.display='none';return;}
+  b.textContent=msg;b.className='banner '+(cls||'sync');b.style.display='block';
+}
+
+function showTab(t){
+  ['scan','records','members'].forEach(x=>{
+    document.getElementById(x).classList.toggle('on',x===t);
+    document.getElementById('tab-'+x).classList.toggle('on',x===t);
+  });
+  if(t==='records')renderRecords();
+  if(t==='members')renderMembers();
+  if(t!=='scan'&&scanning)toggleScan();
+}
+
+/* ---- 讀取雲端資料 ---- */
+async function loadData(){
+  banner('連線雲端中…','sync');
+  try{
+    const r = await fetch(API + '?secret=' + encodeURIComponent(SECRET));
+    const d = await r.json();
+    if(!d.ok) throw new Error(d.error||'load fail');
+    state.members = d.members; state.present = d.present; state.today = d.today;
+    document.getElementById('todayLabel').textContent = d.today;
+    banner('',''); updateStats();
+    if(document.getElementById('records').classList.contains('on'))renderRecords();
+    if(document.getElementById('members').classList.contains('on'))renderMembers();
+  }catch(e){
+    banner('無法連線雲端,請檢查網址/網路後按「重新整理」','err');
+  }
+}
+
+/* ---- 新增會員 ---- */
+async function addMember(){
+  const el=document.getElementById('newName');
+  const name=el.value.trim();
+  if(!name)return;
+  const btn=document.getElementById('addBtn');
+  btn.disabled=true; btn.textContent='新增中…';
+  try{
+    const d = await post({action:'addMember', name});
+    if(!d.ok) throw new Error(d.error);
+    el.value=''; await loadData(); renderMembers();
+  }catch(e){ banner('新增失敗,請重試','err'); }
+  btn.disabled=false; btn.textContent='新增會員';
+}
+
+async function delMember(id){
+  if(!confirm('刪除此會員?(雲端會一併移除)')) return;
+  try{ await post({action:'deleteMember', id}); await loadData(); renderMembers(); }
+  catch(e){ banner('刪除失敗','err'); }
+}
+
+async function post(payload){
+  payload.secret = SECRET;
+  const r = await fetch(API, {method:'POST', body:JSON.stringify(payload)});
+  return r.json();
+}
+
+/* ---- 會員 / QR ---- */
+function renderMembers(){
+  const list=document.getElementById('memberList');
+  document.getElementById('memCount').textContent=state.members.length?'('+state.members.length+')':'';
+  if(!state.members.length){
+    list.innerHTML='<div class="empty">尚未有會員。新增後,系統會自動產生雲端綁定的專屬 QR Code。</div>';
+    document.getElementById('qrGrid').innerHTML='';
+    document.getElementById('qrNote').style.display='none';
+    document.getElementById('printBtn').style.display='none';return;
+  }
+  list.innerHTML=state.members.map(m=>`
+    <div class="row"><div class="nm">${esc(m.name)}</div><div class="meta">${m.id}</div>
+    <button class="del" onclick="delMember('${m.id}')">&times;</button></div>`).join('');
+  renderQR();
+}
+function renderQR(){
+  const grid=document.getElementById('qrGrid');grid.innerHTML='';
+  document.getElementById('qrNote').style.display='block';
+  document.getElementById('printBtn').style.display='block';
+  state.members.forEach(m=>{
+    const card=document.createElement('div');card.className='qcard';
+    const img=document.createElement('img');img.alt='QR '+m.name;
+    img.src='https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=4&qzone=1&data='+encodeURIComponent('BNI:'+m.id);
+    img.onerror=function(){const n=document.createElement('div');n.style.cssText='font-size:11px;color:var(--red);padding:30px 6px;';n.textContent='QR 圖載入失敗,請檢查網路';card.replaceChild(n,img);};
+    card.appendChild(img);
+    const bb=document.createElement('div');bb.className='qb';bb.textContent='BNI';
+    const nm=document.createElement('div');nm.className='qn';nm.textContent=m.name;
+    const ii=document.createElement('div');ii.className='qi';ii.textContent=m.id;
+    card.appendChild(bb);card.appendChild(nm);card.appendChild(ii);grid.appendChild(card);
+  });
+}
+
+/* ---- 掃碼 ---- */
+function toggleScan(){
+  const btn=document.getElementById('scanToggle');
+  if(scanning){scanner.stop().then(()=>{scanning=false;btn.textContent='開始掃碼';btn.classList.remove('stop');});return;}
+  if(!state.members.length){setMsg('名單載入中或尚無會員,請稍候','err');return;}
+  scanner=new Html5Qrcode('reader');
+  scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:220,height:220}},onScan,()=>{})
+    .then(()=>{scanning=true;btn.textContent='停止掃碼';btn.classList.add('stop');setMsg('對準會員 QR Code…','');})
+    .catch(()=>setMsg('無法開啟相機,請允許相機權限','err'));
+}
+async function onScan(text){
+  let id=text; if(text.startsWith('BNI:'))id=text.slice(4);
+  const now=Date.now();
+  if(lastScan.id===id && now-lastScan.t<3000)return;
+  lastScan={id,t:now};
+  const m=state.members.find(x=>x.id===id);
+  if(!m){setMsg('✕ 無效的 QR Code','err');beep(false);return;}
+  if(state.present.some(x=>x.id===id)){setMsg('● '+m.name+' 已點過名','dup');beep(false);return;}
+  setMsg('記錄中… '+m.name,'');
+  try{
+    const d=await post({action:'checkin', id});
+    if(!d.ok) throw new Error(d.error);
+    if(d.duplicate){setMsg('● '+m.name+' 已點過名','dup');beep(false);return;}
+    state.present.push({id, name:m.name, time:d.time});
+    updateStats();
+    setMsg('✓ '+m.name+' 出席已記錄','ok');beep(true);
+  }catch(e){
+    lastScan={id:null,t:0};
+    setMsg('✕ 上傳失敗,請重掃一次','err');beep(false);
+  }
+}
+function setMsg(t,c){const e=document.getElementById('scanMsg');e.textContent=t;e.className='scanmsg '+(c||'');}
+function beep(ok){try{const a=new(window.AudioContext||window.webkitAudioContext)();const o=a.createOscillator();const g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=ok?880:300;g.gain.value=.1;o.start();setTimeout(()=>{o.stop();a.close();},ok?120:200);}catch(e){}}
+
+/* ---- 統計 / 記錄 ---- */
+function updateStats(){
+  const present=state.present.length, total=state.members.length;
+  document.getElementById('sPresent').textContent=present;
+  document.getElementById('sAbsent').textContent=Math.max(0,total-present);
+  document.getElementById('sTotal').textContent=total;
+}
+function renderRecords(){
+  const presentIds=new Set(state.present.map(x=>x.id));
+  const present=state.members.filter(m=>presentIds.has(m.id));
+  const absent=state.members.filter(m=>!presentIds.has(m.id));
+  document.getElementById('rPresent').textContent=present.length;
+  document.getElementById('rAbsent').textContent=absent.length;
+  const timeOf=id=>(state.present.find(x=>x.id===id)||{}).time||'';
+  document.getElementById('presentList').innerHTML=present.length?present.map(m=>`
+    <div class="row"><div class="nm">${esc(m.name)}</div><div class="meta">${timeOf(m.id)}</div><span class="pill in">已到</span></div>`).join(''):'<div class="empty">尚未有人點名</div>';
+  document.getElementById('absentList').innerHTML=absent.length?absent.map(m=>`
+    <div class="row"><div class="nm">${esc(m.name)}</div><span class="pill out">未到</span></div>`).join(''):'<div class="empty">全員到齊 🎉</div>';
+}
+function exportCSV(){
+  const presentIds=new Set(state.present.map(x=>x.id));
+  const timeOf=id=>(state.present.find(x=>x.id===id)||{}).time||'';
+  let csv='\uFEFF姓名,狀態,時間,日期\n';
+  state.members.forEach(m=>{const p=presentIds.has(m.id);csv+=`"${m.name}",${p?'已到':'未到'},${p?timeOf(m.id):''},${state.today}\n`;});
+  const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='BNI點名_'+state.today+'.csv';a.click();
+}
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+/* 啟動 */
+loadData();
+</script>
+</body>
+</html>
